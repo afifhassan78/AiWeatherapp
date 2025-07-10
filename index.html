@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <style>
+        :root {
+            --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-bg: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            --accent-color: #667eea;
+            --detail-bg: rgba(102, 126, 234, 0.1);
+            --detail-border: rgba(102, 126, 234, 0.2);
+            --chat-bg: #f8f9fa;
+            --message-bg: white;
+            --border-color: #e9ecef;
+            --success-color: #00b894;
+            --error-color: #e17055;
+            --warning-color: #fdcb6e;
+        }
+
+        [data-theme="dark"] {
+            --primary-bg: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
+            --secondary-bg: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+            --card-bg: rgba(45, 52, 54, 0.95);
+            --text-primary: #ddd;
+            --text-secondary: #b2bec3;
+            --accent-color: #74b9ff;
+            --detail-bg: rgba(116, 185, 255, 0.2);
+            --detail-border: rgba(116, 185, 255, 0.3);
+            --chat-bg: #2d3436;
+            --message-bg: #636e72;
+            --border-color: #636e72;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-bg);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .weather-container {
+            width: 100%;
+            max-width: 450px;
+            position: relative;
+        }
+
+        .weather-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .weather-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--secondary-bg);
+            border-radius: 25px 25px 0 0;
+        }
+
+        .weather-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.2);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            font-size: 1.5rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1) rotate(15deg);
+        }
+
+        /* Chat Button Styles */
+        .chat-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 70px;
+            height: 70px;
+            background: var(--secondary-bg);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.8rem;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s infinite;
+        }
+
+        .chat-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .chat-button:active {
+            transform: scale(0.95);
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            }
+            50% {
+                box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+            }
+            100% {
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            }
+        }
+
+        /* Chat Modal Styles */
+        .chat-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            padding: 20px;
+        }
+
+        .chat-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 500px;
+            height: 600px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+
+        .chat-modal.active .chat-container {
+            transform: scale(1);
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(102, 126, 234, 0.3);
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .weather-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            display: block;
+            filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .temperature {
+            font-size: 4rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            background: var(--secondary-bg);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .description {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            text-transform: capitalize;
+            font-weight: 500;
+        }
+
+        .location {
+            font-size: 1.2rem;
+            color: var(--accent-color);
+            margin-bottom: 30px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .weather-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .detail-item {
+            background: var(--detail-bg);
+            padding: 20px;
+            border-radius: 20px;
+            border: 2px solid var(--detail-border);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .detail-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .detail-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--secondary-bg);
+            border-radius: 20px 20px 0 0;
+        }
+
+        .detail-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .error {
+            color: var(--error-color);
+            font-size: 1.1rem;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+
+        .retry-btn, .refresh-btn {
+            background: var(--secondary-bg);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 30px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .retry-btn:hover, .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Chatbot Styles */
+        .chatbot-header {
+            background: var(--secondary-bg);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+        }
+
+        .chatbot-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .close-chat {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-chat:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 25px;
+            background: var(--chat-bg);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            animation: messageSlide 0.4s ease;
+            position: relative;
+        }
+
+        .message.user {
+            background: var(--secondary-bg);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .message.bot {
+            background: var(--message-bg);
+            color: var(--text-primary);
+            align-self: flex-start;
+            border-bottom-left-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 20px;
+            background: var(--message-bg);
+            border-radius: 20px;
+            border-bottom-left-radius: 8px;
+            max-width: 100px;
+            align-self: flex-start;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.4;
+            }
+            30% {
+                transform: translateY(-8px);
+                opacity: 1;
+            }
+        }
+
+        .chat-input-container {
+            padding: 25px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 50px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            background: var(--message-bg);
+            color: var(--text-primary);
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .send-btn {
+            background: var(--secondary-bg);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Scrollbar Styles */
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #5a6fd8;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            
+            .weather-card {
+                padding: 25px;
+                border-radius: 20px;
+            }
+            
+            .weather-icon {
+                font-size: 4rem;
+            }
+            
+            .temperature {
+                font-size: 3rem;
+            }
+            
+            .weather-details {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .chat-container {
+                height: 500px;
+                margin: 10px;
+            }
+
+            .chat-messages {
+                padding: 20px;
+            }
+
+            .chat-input-container {
+                padding: 20px;
+            }
+
+            .message {
+                max-width: 90%;
+                padding: 12px 16px;
+            }
+
+            .theme-toggle {
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+
+            .chat-button {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+                bottom: 20px;
+                right: 20px;
+            }
+        }
+
+        /* Desktop */
+        @media (min-width: 1024px) {
+            .weather-card {
+                padding: 50px;
+            }
+            
+            .chat-container {
+                height: 700px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()" id="theme-toggle">🌙</button>
+    <button class="chat-button" onclick="openChat()" id="chat-button">💬</button>
+    
+    <div class="weather-container">
+        <div class="weather-card">
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Getting your location weather...</p>
+            </div>
+            
+            <div id="weather-content" style="display: none;">
+                <div class="weather-icon" id="weather-icon">🌤️</div>
+                <div class="temperature" id="temperature">--°C</div>
+                <div class="description" id="description">--</div>
+                <div class="location" id="location">
+                    <span>📍</span>
+                    <span>--</span>
+                </div>
+                
+                <div class="weather-details">
+                    <div class="detail-item">
+                        <div class="detail-label">💨 Wind Speed</div>
+                        <div class="detail-value" id="wind-speed">-- km/h</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">💧 Humidity</div>
+                        <div class="detail-value" id="humidity">--%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">👁️ Visibility</div>
+                        <div class="detail-value" id="visibility">-- km</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">🌡️ Feels Like</div>
+                        <div class="detail-value" id="feels-like">--°C</div>
+                    </div>
+                </div>
+                
+                <button class="refresh-btn" onclick="getWeather()">🔄 Refresh</button>
+            </div>
+            
+            <div id="error-content" style="display: none;">
+                <div class="weather-icon">❌</div>
+                <div class="error" id="error-message">Unable to get weather data</div>
+                <button class="retry-btn" onclick="getWeather()">Try Again</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Modal -->
+    <div class="chat-modal" id="chat-modal">
+        <div class="chat-container">
+            <div class="chatbot-header">
+                <div class="chatbot-title">
+                    🤖 Weather AI Assistant
+                </div>
+                <button class="close-chat" onclick="closeChat()">×</button>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages">
+                <div class="message bot">
+                    👋 Hello! I'm your weather AI assistant. Ask me anything about weather, climate, or need some weather tips!
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <input type="text" class="chat-input" id="chat-input" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" id="send-btn" onclick="sendMessage()">
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Keys
+        const OPENWEATHER_API_KEY = '0730a864c5c524d50c477c49d6488f15';
+        const GEMINI_API_KEY = 'AIzaSyARdM9ks7lrkmPAHto7jO_rX-D-sU0Th5M';
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+        // DOM Elements
+        const loadingEl = document.getElementById('loading');
+        const weatherContentEl = document.getElementById('weather-content');
+        const errorContentEl = document.getElementById('error-content');
+        const errorMessageEl = document.getElementById('error-message');
+
+        // Chat elements
+        const chatModal = document.getElementById('chat-modal');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        // Theme toggle elements
+        const themeToggle = document.getElementById('theme-toggle');
+
+        // Store current weather data for AI context
+        let currentWeatherData = null;
+
+        // Chat Functions
+        function openChat() {
+            chatModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => {
+                chatInput.focus();
+            }, 300);
+        }
+
+        function closeChat() {
+            chatModal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal when clicking outside
+        chatModal.addEventListener('click', (e) => {
+            if (e.target === chatModal) {
+                closeChat();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && chatModal.classList.contains('active')) {
+                closeChat();
+            }
+        });
+
+        // Theme Management
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            
+            // Save theme preference
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Load saved theme
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        }
+
+        function getWeatherIcon(weatherCode, isDay = true) {
+            const iconMap = {
+                '01d': '☀️', '01n': '🌙',
+                '02d': '⛅', '02n': '☁️',
+                '03d': '☁️', '03n': '☁️',
+                '04d': '☁️', '04n': '☁️',
+                '09d': '🌧️', '09n': '🌧️',
+                '10d': '🌦️', '10n': '🌧️',
+                '11d': '⛈️', '11n': '⛈️',
+                '13d': '❄️', '13n': '❄️',
+                '50d': '🌫️', '50n': '🌫️'
+            };
+            return iconMap[weatherCode] || '🌤️';
+        }
+
+        function showLoading() {
+            loadingEl.style.display = 'flex';
+            weatherContentEl.style.display = 'none';
+            errorContentEl.style.display = 'none';
+        }
+
+        function showWeather() {
+            loadingEl.style.display = 'none';
+            weatherContentEl.style.display = 'block';
+            errorContentEl.style.display = 'none';
+        }
+
+        function showError(message) {
+            loadingEl.style.display = 'none';
+            weatherContentEl.style.display = 'none';
+            errorContentEl.style.display = 'block';
+            errorMessageEl.textContent = message;
+        }
+
+        function updateWeatherDisplay(data) {
+            // Store weather data for AI context
+            currentWeatherData = data;
+            
+            document.getElementById('weather-icon').textContent = getWeatherIcon(data.weather[0].icon);
+            document.getElementById('temperature').textContent = `${Math.round(data.main.temp)}°C`;
+            document.getElementById('description').textContent = data.weather[0].description;
+            document.getElementById('location').innerHTML = `
+                <span>📍</span>
+                <span>${data.name}, ${data.sys.country}</span>
+            `;
+            document.getElementById('wind-speed').textContent = `${Math.round(data.wind.speed * 3.6)} km/h`;
+            document.getElementById('humidity').textContent = `${data.main.humidity}%`;
+            document.getElementById('visibility').textContent = `${(data.visibility / 1000).toFixed(1)} km`;
+            document.getElementById('feels-like').textContent = `${Math.round(data.main.feels_like)}°C`;
+        }
+
+        async function fetchWeatherData(lat, lon) {
+            try {
+                const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}&units=metric`);
+                
+                if (!response.ok) {
+                    throw new Error('Weather data not available');
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                // Demo data for testing when API is not available
+                const demoData = {
+                    name: "Demo City",
+                    sys: { country: "DC" },
+                    main: {
+                        temp: 22,
+                        feels_like: 25,
+                        humidity: 65
+                    },
+                    weather: [{
+                        main: "Clouds",
+                        description: "partly cloudy",
+                        icon: "02d"
+                    }],
+                    wind: { speed: 3.5 },
+                    visibility: 10000
+                };
+                return demoData;
+            }
+        }
+
+        function getPosition() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    reject(new Error('Geolocation is not supported by this browser'));
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        resolve({
+                            lat: position.coords.latitude,
+                            lon: position.coords.longitude
+                        });
+                    },
+                    (error) => {
+                        let message = 'Unable to get your location';
+                        switch (error.code) {
+                            case error.PERMISSION_DENIED:
+                                message = 'Location access denied. Please enable location services.';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                message = 'Location information unavailable.';
+                                break;
+                            case error.TIMEOUT:
+                                message = 'Location request timed out.';
+                                break;
+                        }
+                        reject(new Error(message));
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 300000
+                    }
+                );
+            });
+        }
+
+        async function getWeather() {
+            showLoading();
+            
+            try {
+                const position = await getPosition();
+                const weatherData = await fetchWeatherData(position.lat, position.lon);
+                updateWeatherDisplay(weatherData);
+                showWeather();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        // Chatbot Functions
+        function addMessage(message, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+            messageDiv.textContent = message;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.id = 'typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const typingIndicator = document.getElementById('typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // Create weather context for AI
+        function createWeatherContext() {
+            if (!currentWeatherData) {
+                return "Current weather data is not available.";
+            }
+            
+            const data = currentWeatherData;
+            return `Current weather in ${data.name}, ${data.sys.country}: 
+Temperature: ${Math.round(data.main.temp)}°C (feels like ${Math.round(data.main.feels_like)}°C)
+Condition: ${data.weather[0].description}
+Humidity: ${data.main.humidity}%
+Wind Speed: ${Math.round(data.wind.speed * 3.6)} km/h
+Visibility: ${(data.visibility / 1000).toFixed(1)} km`;
+        }
+
+        // Call Gemini API for AI response
+        async function getAIResponse(userMessage) {
+            try {
+                const weatherContext = createWeatherContext();
+                const prompt = `Based on the current weather conditions: ${weatherContext}\n\nUser question: ${userMessage}\n\nPlease provide a helpful, friendly response about the weather or related topics. Keep it concise and engaging.`;
+                
+                const response = await fetch(GEMINI_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
+                    // Clean up the response text to remove markdown formatting
+                    let responseText = data.candidates[0].content.parts[0].text;
+                    
+                    // Remove asterisks and clean up formatting
+                    responseText = responseText.replace(/\*\*\*/g, '');
+                    responseText = responseText.replace(/\*\*/g, '');
+                    responseText = responseText.replace(/\*/g, '');
+                    
+                    return responseText;
+                } else {
+                    throw new Error('Invalid response format from API');
+                }
+            } catch (error) {
+                console.error('Error calling Gemini API:', error);
+                // Fallback to simple weather responses
+                return getSimpleWeatherResponse(userMessage);
+            }
+        }
+
+        // Simple weather responses as fallback
+        function getSimpleWeatherResponse(userMessage) {
+            const message = userMessage.toLowerCase();
+            const weatherContext = createWeatherContext();
+            
+            // Common weather questions
+            if (message.includes('temperature') || message.includes('how hot') || message.includes('how cold')) {
+                return `The current temperature is ${Math.round(currentWeatherData.main.temp)}°C, but it feels like ${Math.round(currentWeatherData.main.feels_like)}°C.`;
+            }
+            else if (message.includes('humidity')) {
+                return `The current humidity is ${currentWeatherData.main.humidity}%. ` + 
+                       (currentWeatherData.main.humidity > 70 ? "It's quite humid today!" : "The humidity level is comfortable.");
+            }
+            else if (message.includes('wind')) {
+                return `The wind speed is ${Math.round(currentWeatherData.wind.speed * 3.6)} km/h. ` +
+                       (currentWeatherData.wind.speed > 20 ? "It's quite windy today!" : "The wind is calm.");
+            }
+            else if (message.includes('rain') || message.includes('umbrella')) {
+                if (currentWeatherData.weather[0].main.toLowerCase().includes('rain')) {
+                    return "Yes, you should bring an umbrella as rain is expected today!";
+                } else {
+                    return "No rain expected today, so you can leave the umbrella at home.";
+                }
+            }
+            else if (message.includes('hello') || message.includes('hi') || message.includes('hey')) {
+                return "Hello! 👋 I'm your weather assistant. Ask me about the current weather or for weather tips!";
+            }
+            else if (message.includes('help')) {
+                return "I can tell you about the current weather conditions, temperature, humidity, wind speed, and more! Try asking:\n" +
+                       "- What's the temperature?\n" +
+                       "- Do I need an umbrella?\n" +
+                       "- How's the wind today?\n" +
+                       "- What's the humidity?";
+            }
+            else {
+                return "Here's the current weather information:\n" + weatherContext + 
+                       "\n\nIf you have specific questions, feel free to ask!";
+            }
+        }
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, true);
+            chatInput.value = '';
+            
+            // Disable send button temporarily
+            sendBtn.disabled = true;
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            try {
+                // Get AI response
+                const aiResponse = await getAIResponse(message);
+                
+                // Simulate typing delay
+                await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+                
+                // Remove typing indicator and show response
+                removeTypingIndicator();
+                addMessage(aiResponse, false);
+            } catch (error) {
+                console.error('Error generating response:', error);
+                removeTypingIndicator();
+                addMessage("I'm having trouble responding right now. Please try again in a moment! 😊", false);
+            } finally {
+                // Re-enable send button
+                sendBtn.disabled = false;
+                chatInput.focus();
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Initialize the app
+        loadTheme();
+        getWeather();
+
+        // Focus chat input when modal opens
+        chatModal.addEventListener('transitionend', () => {
+            if (chatModal.classList.contains('active')) {
+                chatInput.focus();
+            }
+        });
+    </script>
+</body>
+</html>
